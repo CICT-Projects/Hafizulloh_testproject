@@ -1,0 +1,151 @@
+@{
+    ViewData["Title"] = "Car Manager";
+    Layout = "_Layout";
+}
+
+<style>
+    .btn-animated:hover {
+        transform: scale(1.05);
+        transition: 0.2s ease;
+    }
+    .car-item {
+        margin-bottom: 10px;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+    }
+</style>
+
+<h1 class="mb-4">Car Manager</h1>
+
+<div class="mb-3">
+    <a href="/Home/Parts" class="btn btn-primary">Manage Parts</a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h2 class="h5">Add/Edit Car</h2>
+    </div>
+    <div class="card-body">
+        <form id="addCarForm" class="row g-3">
+            <input type="hidden" id="carId">
+            <div class="col-md-4">
+                <label for="make" class="form-label">Make</label>
+                <input type="text" class="form-control" id="make" required>
+            </div>
+            <div class="col-md-4">
+                <label for="model" class="form-label">Model</label>
+                <input type="text" class="form-control" id="model" required>
+            </div>
+            <div class="col-md-2">
+                <label for="year" class="form-label">Year</label>
+                <input type="number" class="form-control" id="year" required>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" id="submitBtn" class="btn btn-primary btn-animated">Add Car</button>
+                <button type="button" id="cancelBtn" class="btn btn-secondary btn-animated ms-2" style="display:none;">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="h5">Cars List</h2>
+    </div>
+    <div class="card-body">
+        <ul id="carsList" class="list-group"></ul>
+    </div>
+</div>
+
+<script>
+    const apiUrl = '/api/cars';
+
+    document.getElementById('addCarForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const carId = document.getElementById('carId').value;
+        const car = {
+            make: document.getElementById('make').value,
+            model: document.getElementById('model').value,
+            year: parseInt(document.getElementById('year').value)
+        };
+        let response;
+        if (carId) {
+            response = await fetch(`${apiUrl}/${carId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(car)
+            });
+            if (response.ok) {
+                alert('Car updated');
+                resetForm();
+                loadCars();
+            }
+        } else {
+            response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(car)
+            });
+            if (response.ok) {
+                alert('Car added');
+                resetForm();
+                loadCars();
+            }
+        }
+    });
+
+    document.getElementById('cancelBtn').addEventListener('click', resetForm);
+
+    // Автоматическая загрузка данных при загрузке страницы
+    loadCars();
+
+    async function loadCars() {
+        const response = await fetch(apiUrl);
+        const cars = await response.json();
+        const list = document.getElementById('carsList');
+        list.innerHTML = '';
+        cars.forEach(car => {
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex justify-content-between align-items-center car-item';
+            li.textContent = `${car.id}: ${car.make} ${car.model} (${car.year})`;
+            const btnGroup = document.createElement('div');
+            const editBtn = document.createElement('button');
+            editBtn.className = 'btn btn-warning btn-sm btn-animated me-2';
+            editBtn.textContent = 'Edit';
+            editBtn.onclick = () => editCar(car);
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'btn btn-danger btn-sm btn-animated';
+            deleteBtn.textContent = 'Delete';
+            deleteBtn.onclick = () => deleteCar(car.id);
+            btnGroup.appendChild(editBtn);
+            btnGroup.appendChild(deleteBtn);
+            li.appendChild(btnGroup);
+            list.appendChild(li);
+        });
+    }
+
+    function editCar(car) {
+        document.getElementById('carId').value = car.id;
+        document.getElementById('make').value = car.make;
+        document.getElementById('model').value = car.model;
+        document.getElementById('year').value = car.year;
+        document.getElementById('submitBtn').textContent = 'Update Car';
+        document.getElementById('cancelBtn').style.display = 'inline-block';
+    }
+
+    function resetForm() {
+        document.getElementById('addCarForm').reset();
+        document.getElementById('carId').value = '';
+        document.getElementById('submitBtn').textContent = 'Add Car';
+        document.getElementById('cancelBtn').style.display = 'none';
+    }
+
+    async function deleteCar(id) {
+        const response = await fetch(`${apiUrl}/${id}`, { method: 'DELETE' });
+        if (response.ok) {
+            alert('Car deleted');
+            loadCars();
+        }
+    }
+</script>
